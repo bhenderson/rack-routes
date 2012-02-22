@@ -13,7 +13,9 @@ require 'hoe'
 Hoe.spec 'rack-routes' do
   developer 'Brian Henderson', 'bhenderson@attinteractive.com'
 
-  # self.rubyforge_name = 'rack-routesx' # if different than 'rack-routes'
+  self.readme_file      = "README.rdoc"
+
+  self.testlib          = :minitest
 end
 
 # vim: syntax=ruby

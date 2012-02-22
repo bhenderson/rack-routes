@@ -46,7 +46,7 @@ class TestRack::TestRoutes < RoutesTestCase
     app.location '/images/', :prefix => '^~' do
       "3"
     end
-    app.location /\.(gif|jpg|jpeg)$/i do
+    app.location %r/\.(gif|jpg|jpeg)$/i do
       "4"
     end
 
@@ -65,7 +65,7 @@ class TestRack::TestRoutes < RoutesTestCase
   end
 
   def test_captures
-    app.location /^\/imag(.*)/ do
+    app.location %r/^\/imag(.*)/ do
     end
 
     @env['PATH_INFO'] = '/images/foo'
@@ -92,7 +92,7 @@ class TestRack::TestRoutes < RoutesTestCase
       '1'
     end
 
-    app.location /\/asdf/ do
+    app.location %r/\/asdf/ do
       '2'
     end
 
@@ -106,7 +106,7 @@ class TestRack::TestRoutes < RoutesTestCase
 
     assert_location_match '1', '/asdf'
 
-    app.location /\/asdf/ do
+    app.location %r/\/asdf/ do
       '2'
     end
 
@@ -114,7 +114,7 @@ class TestRack::TestRoutes < RoutesTestCase
   end
 
   def test_call_twice
-    app.location /\/asdf/ do
+    app.location %r/\/asdf/ do
       '2'
     end
 

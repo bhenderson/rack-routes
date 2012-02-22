@@ -129,7 +129,7 @@ module Rack
 
     def call! env
       @env  = env
-      @path = URI.decode @env['PATH_INFO']
+      @path = URI.decode_www_form_component @env['PATH_INFO']
 
       (matching_app || @app).call(env)
     end
