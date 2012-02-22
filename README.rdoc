@@ -6,7 +6,8 @@
 
 Provides a routing layer for Rack similar to nginx location directive.
 http://wiki.nginx.org/HttpCoreModule#location
-support provided by ATT Interactive (yp.com)
+
+support provided by ATT Interactive (http://yp.com)
 
 == FEATURES/PROBLEMS:
 
