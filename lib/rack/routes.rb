@@ -2,7 +2,7 @@ require 'uri'
 
 module Rack
   class Routes
-    VERSION = '0.1.0'
+    VERSION = '0.1.1'
 
     class LocDirectiveError < RuntimeError; end
 
