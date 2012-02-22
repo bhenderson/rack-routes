@@ -1,7 +1,7 @@
 .autotest
 History.txt
 Manifest.txt
-README.txt
+README.rdoc
 Rakefile
 examples/config.ru
 lib/rack/routes.rb
