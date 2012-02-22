@@ -14,6 +14,7 @@ support provided by ATT Interactive (http://yp.com)
 Adding location directives will route any request which matches the path according to the rules to the given block. The idea is to further extend this to call your own code (controller/action, etc.)
 
 see sample controller in examples/config.ru
+see also the docs for Rack::Routes#location
 
 == FEATURES/PROBLEMS:
 
