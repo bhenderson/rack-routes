@@ -123,14 +123,32 @@ class TestRack::TestRoutes < RoutesTestCase
   end
 
   def test_invalid_types
-    assert_raises app::LocDirectiveError do
+    assert_raises ArgumentError do
       app.location '/', :prefix => nil do
       end
     end
-    assert_raises app::LocDirectiveError do
+    assert_raises ArgumentError do
       app.location '/', :prefix => 'unknown' do
       end
     end
+  end
+
+  def test_app_or_block
+    app.location '/a', lambda{|e| '3' }
+    assert_location_match '3', '/a'
+
+    app.location '/b' do; '4' end
+    assert_location_match '4', '/b'
+
+    assert_raises ArgumentError do
+      app.location '/', 'doesnt respond to call'
+    end
+  end
+
+  def test_app_with_opts
+    app.location '/a', {:exact => true}, lambda{|e| '1'}
+
+    assert_equal '/a', app.locations[:exact][0][0]
   end
 
   def assert_location_match expected, path, opts = {}

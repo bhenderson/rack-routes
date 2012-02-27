@@ -4,8 +4,6 @@ module Rack
   class Routes
     VERSION = '0.1.1'
 
-    class LocDirectiveError < RuntimeError; end
-
     class << self
 
       # convience rack interface
@@ -38,6 +36,8 @@ module Rack
       # === Args
       # +path+:: The path to match on. Can be String or Regexp.
       # +opts+:: Hash of options. see below.
+      # +app+:: Optional object which responds to :call
+      # +block+:: required if +app+ is missing
       #
       # +opts+ keys:
       # +:exact+:: Type of string matching. default false
@@ -52,6 +52,8 @@ module Rack
       # +^~+:: skip regex matching
       #
       # yields +env+
+      #
+      # raises ArgumentError if app or block is missing or if type is invalid
       #
       # === Examples
       #
@@ -89,7 +91,12 @@ module Rack
       #
       # run Rack::Routes
 
-      def location path, opts = {}, &blk
+      def location path, *args, &blk
+        app = args.last.respond_to?(:call) ? args.pop : blk
+        raise ArgumentError, 'must provide either an app or a block' unless app
+
+        opts = Hash === args.last ? args.pop : {}
+
         type = opts.fetch(:type, nil)
         type = :regex if Regexp === path
         type ||= case opts.fetch(:exact, opts.fetch(:prefix, false))
@@ -101,10 +108,8 @@ module Rack
                    :string_break
                  end
 
-        raise LocDirectiveError, "unknown type `#{type}'" unless
+        raise ArgumentError, "unknown type `#{type}'" unless
           [:regex, :string, :exact, :string_break].include? type
-
-        app = blk
 
         locations[type] << [path, app, opts]
       end
