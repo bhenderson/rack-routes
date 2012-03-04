@@ -1,3 +1,4 @@
+$:.unshift '../lib'
 require 'rack/routes'
 
 class Server
@@ -49,6 +50,10 @@ class Server
   def status num = nil
     return response.status unless num
     response.status = num.to_i
+  end
+
+  get // do
+    env.inspect
   end
 
   get '/' do

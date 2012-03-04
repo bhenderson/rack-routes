@@ -3,6 +3,8 @@ require 'uri'
 module Rack
   class Routes
     VERSION = '0.2.0'
+    TYPES = [:file, :exact, :string_break, :regex, :string]
+    SORT_TYPES = [:exact, :string, :string_brea]
 
     class << self
 
@@ -22,7 +24,7 @@ module Rack
 
       def compile!
         # longest first
-        [:exact, :string, :string_break].each do |type|
+        SORT_TYPES.each do |type|
           locations[type].sort_by!{|path, _| -path.length}
         end
       end
@@ -108,8 +110,7 @@ module Rack
                    :string_break
                  end
 
-        raise ArgumentError, "unknown type `#{type}'" unless
-          [:regex, :string, :exact, :string_break].include? type
+        raise ArgumentError, "unknown type `#{type}'" unless TYPES.include? type
 
         locations[type] << [path, app, opts]
       end
@@ -149,6 +150,27 @@ module Rack
 
     def find_exact
       find_type(:exact){|pth| pth == @path}
+    end
+
+    def find_files
+      path = nil
+
+      app = find_type(:file){ |dir, opts|
+        files = opts[:files]
+        files << ':uri' if files.empty? # set default pattern
+        Dir.chdir(dir) do
+          files.any? do |file|
+            path = file.gsub ':uri', @path[1..-1] # remove /
+            path = ::File.expand_path './' + path
+            test ?f, path and
+              test ?R, path and
+              path.start_with?(Dir.pwd) # safe file? ie. no '../'
+          end
+        end
+      }
+
+      return unless app
+      app.curry[path]
     end
 
     def find_string
