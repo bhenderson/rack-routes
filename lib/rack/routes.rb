@@ -119,6 +119,28 @@ module Rack
       def locations
         @locations ||= Hash.new{|h,k| h[k] = []}
       end
+
+      # try_files [path1...], :dir => Dir.pwd
+      # Some issues with this method:
+      # * how to handle caching? RFC 2616
+      # * how to handle compression?
+      # it seems like there are other tools much better designed for simply
+      # displaying files.
+      def try_files *files
+        opts = Hash === files.last ? files.pop : {}
+        dir = opts.fetch :dir, Dir.pwd
+        opts[:files] = files
+
+        app = lambda{|path, env|
+          body = ::File.read path
+          [200,
+            {'Content-Type' => 'text/plain',
+              'Content-Size' => body.bytesize.to_s},
+            [body]]
+        }
+
+        locations[:file] << [dir, app, opts]
+      end
     end
 
 
@@ -143,7 +165,7 @@ module Rack
     def find_type type
       _, app = locations[type].find do |path, _, opts|
         next if opts[:method] and opts[:method] != @env['REQUEST_METHOD']
-        yield path
+        yield path, opts
       end
       app
     end
@@ -199,7 +221,8 @@ module Rack
     # matters as the return logic is the same.
 
     def matching_app
-      find_exact          ||
+      find_files          ||
+        find_exact        ||
         find_string_break ||
         find_regex        ||
         find_string

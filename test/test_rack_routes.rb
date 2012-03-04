@@ -151,6 +151,40 @@ class TestRack::TestRoutes < RoutesTestCase
     assert_equal '/a', app.locations[:exact][0][0]
   end
 
+  def test_try_files_default_matches_uri
+    Dir.chdir 'test/public/docs' do
+      app.try_files
+
+      expected = [200,{'Content-Type' => 'text/plain','Content-Size' => '10'},["hello foo\n"]]
+      assert_location_match expected, '/foo.html'
+    end
+  end
+
+  def test_try_files_no_parent_dir_lookup
+    Dir.chdir 'test/public/docs' do
+      app.try_files
+
+      refute_location_match '/../private.txt'
+    end
+  end
+
+  def test_try_files_with_pattern
+    Dir.chdir 'test/public/docs' do
+      app.try_files ':uri/index.html'
+
+      expected = [200,{'Content-Type' => 'text/plain','Content-Size' => '12'},["hello index\n"]]
+      assert_location_match expected, '/'
+    end
+  end
+
+  def test_try_files_with_dir
+    app.try_files ':uri/index.html', :dir => 'test/public'
+
+    expected = [200,{'Content-Type' => 'text/plain','Content-Size' => '12'},["hello index\n"]]
+    assert_location_match expected, '/docs'
+    refute_location_match '/private.txt'
+  end
+
   def assert_location_match expected, path, opts = {}
     @env.merge! opts
     @env['PATH_INFO'] = path

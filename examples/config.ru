@@ -7,6 +7,8 @@ class Server
   class Response < Rack::Response
   end
 
+  Rack::Routes.try_files
+
   def self.route verb, path, opts = {}, &blk
     app = self
     opts.merge! :method => verb.upcase
