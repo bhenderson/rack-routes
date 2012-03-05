@@ -20,13 +20,19 @@ module Rack
         @app.call env
       end
 
+      # Public: Clear currently known locations. This is global for everything
+      # that uses this.
+      def clear_locations
+        @locations.clear if @locations
+      end
+
       # location directives should be run in a certain order. This is needed to
       # establish that order.
 
       def compile!
         # longest first
         SORT_TYPES.each do |type|
-          locations[type].sort_by!{|path, _| -path.length}
+          @locations[type].sort_by!{|path, _| -path.length}
         end
       end
 
@@ -111,34 +117,56 @@ module Rack
                    :string_break
                  end
 
-        raise ArgumentError, "unknown type `#{type}'" unless TYPES.include? type
-
-        locations[type] << [path, app, opts]
+        locations type, path, app, opts
       end
 
-      # accessor for @locations hash
-      def locations
+      # Private: Add new +path+ of type +type+
+      #
+      # type - A Symbol and must be one of +TYPES+
+      # path - A String/Regexp to match PATH_INFO
+      # app  - An object that responds to call. yields +env+
+      # opts - A Hash of various options
+      def locations type, path, app, opts
         @locations ||= Hash.new{|h,k| h[k] = []}
+        raise ArgumentError, "unknown type `#{type}'" unless TYPES.include? type
+        @locations[type] << [path, app, opts]
       end
 
-      # try_files [path1...], :dir => Dir.pwd
-      # Some issues with this method:
-      # * how to handle caching? RFC 2616
+      # Public: Nginx like directive "try_files"
+      #   if the request matches an existing file, that file will be served.
+      #   requests for files outside of this directory are silently ignored
+      #   (include '..'). Files can contain the string ':uri' in which case
+      #   that string will be replaced with the PATH_INFO string minus the
+      #   leading slash (/) Nginx requires a default uri. The default uri in
+      #   this case is just the next best matching path
+      #
+      # files - one or more file pattern. Defaults to ':uri'
+      # opts  - hash of options
+      #         :dir           - base directory in which to serve files.
+      #         :cache_control - not sure actually. probably something like
+      #                          rack/cache
+      #
+      # Examples
+      #
+      #   try_files /system/maintenance.html $uri $uri/index.html $uri.html
+      #
+      #   a request for /foobar will try the following:
+      #   $PROJECT_ROOT/system/maintenance.html or
+      #   $PROJECT_ROOT/foobar or
+      #   $PROJECT_ROOT/foobar/index.html or
+      #   $PROJECT_ROOT/foobar.html
+      #
+      # Some issues I have with this method:
       # * how to handle compression?
-      # it seems like there are other tools much better designed for simply
-      # displaying files.
       def try_files *files
         opts = Hash === files.last ? files.pop : {}
         dir = opts.fetch :dir, Dir.pwd
+        files << ':uri' if files.empty?
         opts[:files] = files
 
-        app = lambda{|path, env|
-          env['PATH_INFO'] = path # override with string matched path
-          # TODO Some how pass caching to this
-          Rack::File.new(dir).call(env)
-        }
+        app = Rack::File.new(dir, opts[:cache_control])
 
-        locations[:file] << [dir, app, opts]
+        locations :file, dir, app, opts
       end
     end
 
@@ -161,6 +189,7 @@ module Rack
       (matching_app || @app).call(env)
     end
 
+    # Private: Wrapper method for finding +type+
     def find_type type
       _, app = locations[type].find do |path, _, opts|
         next if opts[:method] and opts[:method] != @env['REQUEST_METHOD']
@@ -169,30 +198,19 @@ module Rack
       app
     end
 
+    # Private: Match exact type.
     def find_exact
       find_type(:exact){|pth| pth == @path}
     end
 
-    # Rack::File will server a file or return 404 etc. I want to just test if the file is there.
+    # Private: Match file type.
     def find_files
-      path = nil
-
-      app = find_type(:file){ |dir, opts|
-        files = opts[:files]
-        files << ':uri' if files.empty? # set default pattern
-        Dir.chdir(dir) do
-          files.any? do |file|
-            path = file.gsub ':uri', @path[1..-1] # remove /
-            path = './' + path # fix issues for requesting /index.html
-            test ?f, path and # file exists?
-              test ?r, path and # file readable by effective uid/gid?
-              ::File.expand_path(path).start_with?(Dir.pwd) # safe file? ie. no '../'
-          end
-        end
+      find_type(:file){ |dir, opts|
+        # Rack::File will serve a file or return 404 etc. I want to just
+        # test if the file is there.
+        Dir.chdir(dir){
+          opts[:files].any?{ |file| valid_path_from file }}
       }
-
-      return unless app
-      app.curry[path]
     end
 
     def find_string
@@ -208,11 +226,14 @@ module Rack
         @env['routes.location.matchdata'] = Regexp.last_match }
     end
 
+    # Private: Accessor method for @locations Hash. The class doesn't have an
+    # accessor method to keep people from adding arbitrary types, etc.
     def locations
-      self.class.locations
+      self.class.instance_variable_get :@locations
     end
 
-    # search exact matches first
+    # search files
+    # then search exact matches
     # then ^~ strings (not sure what else to call them)
     # then regex
     # then all the other strings
@@ -227,5 +248,17 @@ module Rack
         find_regex        ||
         find_string
     end
+
+    # Private: Convert file name to valid path from Dir.pwd
+    #   file is invalid if not there; not readable; not "within" current
+    #   directory.
+    def valid_path_from file
+      path = file.gsub ':uri', @path[1..-1]               # remove /
+      path = './' + path                                  # make all paths relative to current dir. (fix issues for requesting /index.html)
+      test ?f, path and test ?r, path and                 # file exists? and file readable by effective uid/gid?
+        ::File.expand_path(path).start_with?(Dir.pwd) and # safe file? ie. no '../'
+        @env['PATH_INFO'] = path                          # reset path to expanded form for reading file
+    end
+
   end
 end

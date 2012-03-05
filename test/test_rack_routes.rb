@@ -3,7 +3,7 @@ require 'helper'
 class TestRack::TestRoutes < RoutesTestCase
   def setup
     @env = {'REQUEST_METHOD' => 'GET', 'PATH_INFO' => '/'}
-    app.locations.clear
+    app.clear_locations
   end
 
   def test_location_exact
@@ -148,7 +148,7 @@ class TestRack::TestRoutes < RoutesTestCase
   def test_app_with_opts
     app.location '/a', {:exact => true}, lambda{|e| '1'}
 
-    assert_equal '/a', app.locations[:exact][0][0]
+    assert_equal '/a', app.new.locations[:exact][0][0]
   end
 
   def test_try_files_default_matches_uri
