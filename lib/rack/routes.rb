@@ -184,8 +184,8 @@ module Rack
           files.any? do |file|
             path = file.gsub ':uri', @path[1..-1] # remove /
             path = './' + path # fix issues for requesting /index.html
-            test ?f, path and
-              test ?R, path and
+            test ?f, path and # file exists?
+              test ?r, path and # file readable by effective uid/gid?
               ::File.expand_path(path).start_with?(Dir.pwd) # safe file? ie. no '../'
           end
         end
