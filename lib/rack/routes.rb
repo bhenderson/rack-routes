@@ -9,6 +9,28 @@ module Rack
 
     class << self
 
+      # Private: Add new +path+ of type +type+.
+      #
+      # type - A Symbol and must be one of +TYPES+.
+      # path - A String/Regexp to match PATH_INFO.
+      # app  - An object that responds to call. yields +env+.
+      # opts - A Hash of various options.
+      #
+      # Raises TypeError if +type+ is not one of +TYPES+.
+      #
+      # Returns nothing.
+      def add_location type, path, app, opts
+        raise TypeError, "unknown type `#{type}'" unless
+          TYPES.include? type
+        raise TypeError, "#{app.inspect} must respond to :call" unless
+          app.respond_to? :call
+        raise TypeError, "#{opts.inspect} must be a Hashy" unless
+          opts.respond_to?(:[]) and opts.respond_to?(:[]=)
+
+        @locations ||= Hash.new{|h,k| h[k] = []}
+        @locations[type] << [path, app, opts]
+      end
+
       # convience rack interface
       # Enables the use of either:
       # use Rack::Routes
@@ -117,19 +139,7 @@ module Rack
                    :string_break
                  end
 
-        locations type, path, app, opts
-      end
-
-      # Private: Add new +path+ of type +type+
-      #
-      # type - A Symbol and must be one of +TYPES+
-      # path - A String/Regexp to match PATH_INFO
-      # app  - An object that responds to call. yields +env+
-      # opts - A Hash of various options
-      def locations type, path, app, opts
-        @locations ||= Hash.new{|h,k| h[k] = []}
-        raise ArgumentError, "unknown type `#{type}'" unless TYPES.include? type
-        @locations[type] << [path, app, opts]
+        add_location type, path, app, opts
       end
 
       # Public: Nginx like directive "try_files"
@@ -166,7 +176,7 @@ module Rack
 
         app = Rack::File.new(dir, opts[:cache_control])
 
-        locations :file, dir, app, opts
+        add_location :file, dir, app, opts
       end
     end
 

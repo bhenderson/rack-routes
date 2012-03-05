@@ -123,11 +123,11 @@ class TestRack::TestRoutes < RoutesTestCase
   end
 
   def test_invalid_types
-    assert_raises ArgumentError do
+    assert_raises TypeError do
       app.location '/', :prefix => nil do
       end
     end
-    assert_raises ArgumentError do
+    assert_raises TypeError do
       app.location '/', :prefix => 'unknown' do
       end
     end
@@ -183,6 +183,24 @@ class TestRack::TestRoutes < RoutesTestCase
     expected = "hello index\n"
     assert_file_content expected, '/docs'
     refute_location_match '/private.txt'
+  end
+
+  def test_add_location_raises_with_invalid_type
+    assert_raises TypeError do
+      app.add_location :no_type, 1,2,3
+    end
+  end
+
+  def test_add_location_raises_if_app_invalid
+    assert_raises TypeError do
+      app.add_location :file, 1,2,3
+    end
+  end
+
+  def test_add_location_raises_if_last_argument_isnt_hash
+    assert_raises TypeError do
+      app.add_location :file, 1,lambda{},3
+    end
   end
 
   def assert_location_match expected, path, opts = {}
