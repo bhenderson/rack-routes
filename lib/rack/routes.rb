@@ -1,4 +1,5 @@
 require 'uri'
+require 'rack/file'
 
 module Rack
   class Routes
@@ -132,11 +133,9 @@ module Rack
         opts[:files] = files
 
         app = lambda{|path, env|
-          body = ::File.read path
-          [200,
-            {'Content-Type' => 'text/plain',
-              'Content-Size' => body.bytesize.to_s},
-            [body]]
+          env['PATH_INFO'] = path # override with string matched path
+          # TODO Some how pass caching to this
+          Rack::File.new(dir).call(env)
         }
 
         locations[:file] << [dir, app, opts]
@@ -174,6 +173,7 @@ module Rack
       find_type(:exact){|pth| pth == @path}
     end
 
+    # Rack::File will server a file or return 404 etc. I want to just test if the file is there.
     def find_files
       path = nil
 
@@ -183,10 +183,10 @@ module Rack
         Dir.chdir(dir) do
           files.any? do |file|
             path = file.gsub ':uri', @path[1..-1] # remove /
-            path = ::File.expand_path './' + path
+            path = './' + path # fix issues for requesting /index.html
             test ?f, path and
               test ?R, path and
-              path.start_with?(Dir.pwd) # safe file? ie. no '../'
+              ::File.expand_path(path).start_with?(Dir.pwd) # safe file? ie. no '../'
           end
         end
       }

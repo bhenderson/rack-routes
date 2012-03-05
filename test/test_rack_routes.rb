@@ -155,8 +155,8 @@ class TestRack::TestRoutes < RoutesTestCase
     Dir.chdir 'test/public/docs' do
       app.try_files
 
-      expected = [200,{'Content-Type' => 'text/plain','Content-Size' => '10'},["hello foo\n"]]
-      assert_location_match expected, '/foo.html'
+      expected = "hello foo\n"
+      assert_file_content expected, '/foo.html'
     end
   end
 
@@ -172,16 +172,16 @@ class TestRack::TestRoutes < RoutesTestCase
     Dir.chdir 'test/public/docs' do
       app.try_files ':uri/index.html'
 
-      expected = [200,{'Content-Type' => 'text/plain','Content-Size' => '12'},["hello index\n"]]
-      assert_location_match expected, '/'
+      expected = "hello index\n"
+      assert_file_content expected, '/'
     end
   end
 
   def test_try_files_with_dir
     app.try_files ':uri/index.html', :dir => 'test/public'
 
-    expected = [200,{'Content-Type' => 'text/plain','Content-Size' => '12'},["hello index\n"]]
-    assert_location_match expected, '/docs'
+    expected = "hello index\n"
+    assert_file_content expected, '/docs'
     refute_location_match '/private.txt'
   end
 
@@ -190,6 +190,15 @@ class TestRack::TestRoutes < RoutesTestCase
     @env['PATH_INFO'] = path
     actual = app.call @env
     assert_equal expected, actual, path
+  end
+
+  def assert_file_content expected, path, opts = {}
+    @env.merge! opts
+    @env['PATH_INFO'] = path
+    _, _, body = app.call @env
+    actual = ''
+    body.each{|p| actual << p}
+    assert_equal expected, actual
   end
 
   def refute_location_match path
