@@ -19,7 +19,7 @@ module Rack
         @env  = env
         @path = URI.decode_www_form_component @env['PATH_INFO']
 
-        match.call(env)
+        match.call(@env)
       end
 
       def find_exact
@@ -41,7 +41,9 @@ module Rack
 
       def find_type type
         app, _ = Rack::Routes.locations[type].find do |_, path, opts|
-          next unless opts.all? do |k,v| @env[k] == v end
+          next unless opts.all? do |k,v|
+            v == @env[k] or v === @env[k]
+          end
           yield path
         end
 

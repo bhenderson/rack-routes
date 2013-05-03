@@ -135,6 +135,13 @@ class TestRack::TestRoutes < RoutesTestCase
     assert_response 200, 'bar post'
   end
 
+  def test_env_match_fuzzy
+    loc '/foo', 'ACCEPT' => %r'^app/json' do 'json' end
+
+    get '/foo', {}, 'ACCEPT' => 'app/json; utf-8'
+    assert_response 200, 'json'
+  end
+
   def loc path, opts = {}
     location path, opts do |env|
       [200, {'Content-Type' => 'text/plain'}, [yield(env)]]
@@ -148,8 +155,8 @@ class TestRack::TestRoutes < RoutesTestCase
     loc '^~ /images/'         do 'D' end
     loc %r'\.(gif|jpg|jpeg)$' do 'E' end
 
-    # this is taken care of by Matcher.new, but it only gets run once for the
-    # whole file.
+    # this is taken care of by Matcher.new, but it only gets run once
+    # for the whole file.
     Rack::Routes.compile!
   end
 
