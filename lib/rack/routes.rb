@@ -17,7 +17,8 @@ module Rack
 
       def call! env
         @env  = env
-        @path = URI.decode_www_form_component @env['PATH_INFO']
+        @path = URI.decode_www_form_component(@env['PATH_INFO']).
+                  downcase
 
         match.call(@env)
       end
@@ -81,6 +82,7 @@ module Rack
     end
 
     def location path, opts = {}, &blk
+      path = path.downcase if String === path
       type = case path
              when Regexp
                :regex
