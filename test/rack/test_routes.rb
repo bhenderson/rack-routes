@@ -142,13 +142,6 @@ class TestRack::TestRoutes < RoutesTestCase
     assert_response 200, 'json'
   end
 
-  def test_case_insensitive
-    loc '/foO' do 'case' end
-
-    get '/Foo'
-    assert_response 200, 'case'
-  end
-
   def loc path, opts = {}
     location path, opts do |env|
       [200, {'Content-Type' => 'text/plain'}, [yield(env)]]
