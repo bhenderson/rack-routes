@@ -60,12 +60,12 @@ module Rack
 
     end
 
-    def self.new app
+    def self.new app = nil
       @app ||= Matcher.new app
     end
 
     def self.call env
-      new(nil).call env
+      new.call env
     end
 
     def self.compile!
