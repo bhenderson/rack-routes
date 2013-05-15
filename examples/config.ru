@@ -1,5 +1,6 @@
 $:.unshift '../lib'
 require 'rack/routes'
+require 'json'
 
 class Server
   class Request < Rack::Request
@@ -9,10 +10,10 @@ class Server
 
   def self.route verb, path, opts = {}, &blk
     app = self
-    opts.merge! :method => verb.upcase
+    opts = {
+      'REQUEST_METHOD' => verb,
+    }.merge! opts
 
-    # change default behavior to use exact
-    opts[:exact] = opts.fetch(:exact, true)
     Rack::Routes.location path, opts do |env|
       app.call(env, &blk)
     end
@@ -52,15 +53,16 @@ class Server
     response.status = num.to_i
   end
 
-  get // do
-    env.inspect
+  get /images/i do
+    content_type 'application/json'
+    env.to_json
   end
 
-  get '/' do
+  get '= /' do
     foo
   end
 
-  get '/asdf', :exact => false do
+  get '/asdf' do
     'hi there'
   end
 
@@ -77,5 +79,4 @@ class Server
   end
 end
 
-use Rack::Routes
-run lambda{|env| [500, {'Content-Type' => 'text/plain'}, ['not found']]}
+run Rack::Routes
